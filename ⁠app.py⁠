@@ -1,0 +1,46 @@
+import os
+from flask import Flask, render_template, request, jsonify
+import google.generativeai as genai
+
+app = Flask(__name__)
+
+# إعداد مفتاح API لـ Gemini (يُفضل وضعه كـ Environment Variable)
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "ضع_مفتاح_GEMINI_هنا")
+genai.configure(api_key=GEMINI_API_KEY)
+
+# استخدام نموذج Gemini
+model = genai.GenerativeModel('gemini-1.5-flash')
+
+@app.route('/')
+def home():
+    return render_template('index.html')
+
+@app.route('/generate_plan', methods=['POST'])
+def generate_plan():
+    data = request.json
+    product_name = data.get('product_name', '')
+    target_audience = data.get('target_audience', '')
+    budget = data.get('budget', '')
+    
+    prompt = f"""
+    أنت مستشار تسويق إلكتروني خبير ومحترف. قم بإنشاء خطة تسويقية شاملة وعملية للمنتج التالي:
+    -اسم المنتج/الخدمة: {product_name}
+    -الجمهور المستهدف: {target_audience}
+    -الميزانية التقريبية: {budget}
+
+    يرجى تقديم الإجابة بتقسيم واضح وشيق يشتمل على:
+    1. 🎯 **تحليل الجمهور المستهدف وزوايا البيع (Selling Points)**.
+    2. 📱 **أفضل المنصات للتسويق واستراتيجية المحتوى (TikTok, Instagram, Meta Ads...)**.
+    3. ✍️ **3 نماذج إعلانية جاهزة (Copywriting)** (بالدارجة الجزائرية المفهومة أو العربية البسيطة).
+    4. 💡 **فكرة فيديو ترويجي (Hook + Script قصيرة)** تجذب الانتباه في أول 3 ثوانٍ.
+    """
+    
+    try:
+        response = model.generate_content(prompt)
+        return jsonify({"success": True, "plan": response.text})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+if __name__ == '__main__':
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
